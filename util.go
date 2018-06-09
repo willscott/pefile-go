@@ -1,16 +1,9 @@
 package pefile
 
 import (
-	"crypto/md5"
-	"crypto/sha1"
-	"crypto/sha256"
 	"encoding/hex"
 	"hash"
-	"math"
 	"regexp"
-
-	"github.com/glaslos/ssdeep"
-	"github.com/pkg/errors"
 )
 
 const (
@@ -90,57 +83,7 @@ func contains(str string, list []string) bool {
 	return false
 }
 
-// GetEntropy calculates the entropy of a chunk of data
-func GetEntropy(data []byte) float64 {
-
-	if len(data) == 0 {
-		return 0.0
-	}
-
-	occurences := [256]int{0}
-	for _, char := range data {
-		// fmt.Printf("Char: %c , int : %d\n", char, char)
-		occurences[int(char)]++
-	}
-
-	entropy := 0.0
-	px := 0.0
-	for _, occurence := range occurences {
-		if occurence > 0 {
-			px = float64(occurence) / float64(len(data))
-			entropy = entropy - px*math.Log2(px)
-		}
-	}
-	// fmt.Println("px: ", px)
-
-	return entropy
-}
-
-// GetFuzzyHash calcurates fuzzy hash by ssdeep
-func GetFuzzyHash(data []byte) (string, error) {
-	ssdp, err := ssdeep.FuzzyBytes(data)
-	if err != nil {
-		return "", errors.Wrap(err, "fail to calc fuzzy hash")
-	}
-	return ssdp, nil
-}
-
 func calcHash(alg hash.Hash, data []byte) string {
 	alg.Write(data)
 	return hex.EncodeToString(alg.Sum(nil))
-}
-
-// GetMD5Hash calcurates md5 hash of data
-func GetMD5Hash(data []byte) string {
-	return calcHash(md5.New(), data)
-}
-
-// GetSHA1Hash calcurates sha1 hash of data
-func GetSHA1Hash(data []byte) string {
-	return calcHash(sha1.New(), data)
-}
-
-// GetSHA256Hash calcurates sha256 hash of data
-func GetSHA256Hash(data []byte) string {
-	return calcHash(sha256.New(), data)
 }
