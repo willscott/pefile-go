@@ -4,12 +4,18 @@ package pefile
   TODO: figure out how to detect endianess instead of forcing LittleEndian
 */
 import (
+	"crypto/md5"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"github.com/edsrzf/mmap-go"
 	"log"
 	"os"
 	"sort"
+	"strings"
+
+	"github.com/awsaba/pefile-go/ordlookup"
+	"github.com/edsrzf/mmap-go"
 )
 
 // PEFile is a representation of the PE/COFF file with some helpful abstractions
