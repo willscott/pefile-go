@@ -8,7 +8,6 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"github.com/edsrzf/mmap-go"
 	"log"
 	"os"
 	"sort"
