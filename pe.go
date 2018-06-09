@@ -479,11 +479,6 @@ func (pe *PEFile) calculateHeaderEnd(offset uint32) {
 		pe.headerEnd = minSectionOffset
 	}
 }
-		pe.headerEnd = offset
-	} else {
-		pe.headerEnd = minSectionOffset
-	}
-}
 
 func (pe *PEFile) GetImpHash() string {
 	impstrs := []string{}
