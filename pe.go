@@ -486,6 +486,7 @@ func (pe *PEFile) calculateHeaderEnd(offset uint32) {
 	}
 }
 
+// GetImpHash calcurates import hash
 func (pe *PEFile) GetImpHash() string {
 	impstrs := []string{}
 	exts := []string{"ocx", "sys", "dll"}
