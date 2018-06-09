@@ -5,16 +5,20 @@ package pefile
 */
 import (
 	"crypto/md5"
+	"crypto/sha1"
+	"crypto/sha256"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"log"
+	"math"
 	"os"
 	"sort"
 	"strings"
 
 	"github.com/awsaba/pefile-go/ordlookup"
 	"github.com/edsrzf/mmap-go"
+	"github.com/glaslos/ssdeep"
+	"github.com/pkg/errors"
 )
 
 // PEFile is a representation of the PE/COFF file with some helpful abstractions
@@ -513,4 +517,54 @@ func (pe *PEFile) GetImpHash() string {
 	libnames := strings.Join(impstrs, ",")
 	h.Write([]byte(libnames))
 	return hex.EncodeToString(h.Sum(nil))
+}
+
+// GetEntropy calculates the entropy of a chunk of data
+func (pe *PEFile) GetEntropy() float64 {
+
+	if pe.dataLen == 0 {
+		return 0.0
+	}
+
+	occurences := [256]int{0}
+	for _, char := range pe.data {
+		// fmt.Printf("Char: %c , int : %d\n", char, char)
+		occurences[int(char)]++
+	}
+
+	entropy := 0.0
+	px := 0.0
+	for _, occurence := range occurences {
+		if occurence > 0 {
+			px = float64(occurence) / float64(len(pe.data))
+			entropy = entropy - px*math.Log2(px)
+		}
+	}
+	// fmt.Println("px: ", px)
+
+	return entropy
+}
+
+// GetFuzzyHash calcurates fuzzy hash by ssdeep
+func (pe *PEFile) GetFuzzyHash() (string, error) {
+	ssdp, err := ssdeep.FuzzyBytes(pe.data)
+	if err != nil {
+		return "", errors.Wrap(err, "fail to calc fuzzy hash")
+	}
+	return ssdp, nil
+}
+
+// GetMD5Hash calcurates md5 hash of data
+func (pe *PEFile) GetMD5Hash() string {
+	return calcHash(md5.New(), pe.data)
+}
+
+// GetSHA1Hash calcurates sha1 hash of data
+func (pe *PEFile) GetSHA1Hash() string {
+	return calcHash(sha1.New(), pe.data)
+}
+
+// GetSHA256Hash calcurates sha256 hash of data
+func (pe *PEFile) GetSHA256Hash() string {
+	return calcHash(sha256.New(), pe.data)
 }
