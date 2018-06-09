@@ -479,3 +479,37 @@ func (pe *PEFile) calculateHeaderEnd(offset uint32) {
 		pe.headerEnd = minSectionOffset
 	}
 }
+		pe.headerEnd = offset
+	} else {
+		pe.headerEnd = minSectionOffset
+	}
+}
+
+func (pe *PEFile) GetImpHash() string {
+	impstrs := []string{}
+	exts := []string{"ocx", "sys", "dll"}
+	for _, entry := range pe.ImportDescriptors {
+		libname := strings.ToLower(string(entry.Dll))
+		parts := strings.Split(libname, ".")
+
+		if len(parts) > 1 && contains(parts[1], exts) {
+			libname = parts[0]
+		}
+
+		for _, imp := range entry.Imports {
+			var funcname string
+			if len(imp.Name) == 0 {
+				funcname = ordlookup.OrdLookup(string(entry.Dll), uint64(imp.Ordinal), true)
+			} else {
+				funcname = string(imp.Name)
+			}
+			impstrs = append(impstrs, fmt.Sprintf("%s.%s", strings.ToLower(libname), strings.ToLower(funcname)))
+			// log.Println(funcname)
+		}
+	}
+
+	h := md5.New()
+	libnames := strings.Join(impstrs, ",")
+	h.Write([]byte(libnames))
+	return hex.EncodeToString(h.Sum(nil))
+}
