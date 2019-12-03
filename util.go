@@ -1,6 +1,8 @@
 package pefile
 
 import (
+	"encoding/hex"
+	"hash"
 	"regexp"
 )
 
@@ -70,4 +72,18 @@ var validDosName = regexp.MustCompile("^[\\pL\\pN!//$%&'\\(\\)`\\-@^_\\{\\}~+,.;
 // can be longer that the 8.3
 func isValidDosFilename(name []byte) bool {
 	return validDosName.Match(name)
+}
+
+func contains(str string, list []string) bool {
+	for _, l := range list {
+		if l == str {
+			return true
+		}
+	}
+	return false
+}
+
+func calcHash(alg hash.Hash, data []byte) string {
+	alg.Write(data)
+	return hex.EncodeToString(alg.Sum(nil))
 }
