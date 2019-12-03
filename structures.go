@@ -3,7 +3,10 @@ package pefile
 import (
 	"encoding/binary"
 	"fmt"
+	"os"
 	"reflect"
+
+	"github.com/pkg/errors"
 )
 
 /* Dos Header */
@@ -26,6 +29,22 @@ func newDosHeader(fileOffset uint32) DosHeader {
 
 func (dh *DosHeader) String() string {
 	return sectionString(dh.FileOffset, "IMAGE_DOS_HEADER", dh.Data) + flagString(dh.Flags)
+}
+
+func (dh *DosHeader) Write(file *os.File) (offset uint32, err error) {
+	if err = binary.Write(file, binary.LittleEndian, dh.Data); err != nil {
+		return
+	}
+	// the dos header pads until `data.E_lfanew`. we can put 0's until then.
+	pad := dh.Data.E_lfanew - dh.Size
+	for i := uint32(0); i < pad; i++ {
+		if err = binary.Write(file, binary.LittleEndian, byte(0)); err != nil {
+			return
+		}
+	}
+
+	offset = offset + dh.Data.E_lfanew
+	return
 }
 
 // DosHeaderD raw data field read from the file
@@ -67,6 +86,14 @@ func newNTHeader(fileOffset uint32) NTHeader {
 	}
 }
 
+func (nh *NTHeader) Write(offset uint32, file *os.File) (newOffset uint32, err error) {
+	if err = binary.Write(file, binary.LittleEndian, nh.Data); err != nil {
+		return
+	}
+	newOffset = offset + nh.Size
+	return
+}
+
 // NTHeaderD raw data field read from the file
 type NTHeaderD struct {
 	Signature uint32
@@ -90,6 +117,14 @@ func newCOFFFileHeader(fileOffset uint32) COFFFileHeader {
 		Size:       uint32(binary.Size(COFFFileHeaderD{})),
 		FileOffset: fileOffset,
 	}
+}
+
+func (fh *COFFFileHeader) Write(offset uint32, file *os.File) (newOffset uint32, err error) {
+	if err = binary.Write(file, binary.LittleEndian, fh.Data); err != nil {
+		return
+	}
+	newOffset = offset + fh.Size
+	return
 }
 
 func (fh *COFFFileHeader) String() string {
@@ -123,6 +158,14 @@ func newOptionalHeader(fileOffset uint32) (header *OptionalHeader) {
 	header.Size = uint32(binary.Size(header.Data))
 	header.FileOffset = fileOffset
 	return header
+}
+
+func (od *OptionalHeader) Write(offset uint32, file *os.File) (newOffset uint32, err error) {
+	if err = binary.Write(file, binary.LittleEndian, od.Data); err != nil {
+		return
+	}
+	newOffset = offset + od.Size
+	return
 }
 
 func (od *OptionalHeader) String() string {
@@ -185,6 +228,14 @@ func (oh *OptionalHeader64) String() string {
 	return sectionString(oh.FileOffset, "OPTIONAL_HEADER64", oh.Data) + flagString(oh.Flags)
 }
 
+func (oh *OptionalHeader64) Write(offset uint32, file *os.File) (newOffset uint32, err error) {
+	if err = binary.Write(file, binary.LittleEndian, oh.Data); err != nil {
+		return
+	}
+	newOffset = offset + oh.Size
+	return
+}
+
 // OptionalHeader64D raw data field read from the file
 type OptionalHeader64D struct {
 	Magic                       uint16
@@ -240,6 +291,14 @@ func newDataDirectory(fileOffset uint32) (header DataDirectory) {
 	}
 }
 
+func (dd *DataDirectory) Write(offset uint32, file *os.File) (newOffset uint32, err error) {
+	if err = binary.Write(file, binary.LittleEndian, dd.Data); err != nil {
+		return
+	}
+	newOffset = offset + dd.Size
+	return
+}
+
 func (dd *DataDirectory) String() string {
 	return sectionString(dd.FileOffset, "DATA_DIRECTORY", dd.Data)
 }
@@ -247,6 +306,7 @@ func (dd *DataDirectory) String() string {
 // SectionHeader wrapper
 type SectionHeader struct {
 	Data           SectionHeaderD
+	DataBytes      []byte
 	FileOffset     uint32
 	Flags          map[string]bool
 	Size           uint32
@@ -259,6 +319,27 @@ func newSectionHeader(fileOffset uint32) SectionHeader {
 	header.Flags = make(map[string]bool)
 	header.FileOffset = fileOffset
 	return header
+}
+
+func (sh *SectionHeader) Write(offset uint32, file *os.File) (newOffset uint32, err error) {
+	if err = binary.Write(file, binary.LittleEndian, sh.Data); err != nil {
+		return
+	}
+	newOffset = offset + sh.Size
+	return
+}
+
+// WriteData writes the data of the seciton onto a file
+func (sh *SectionHeader) WriteData(offset uint32, file *os.File) (newOffset uint32, err error) {
+	if sh.DataBytes == nil {
+		err = errors.New("section doens't have linked data. failing")
+		return
+	}
+	if err = binary.Write(file, binary.LittleEndian, sh.DataBytes); err != nil {
+		return
+	}
+	newOffset = offset + sh.Data.SizeOfRawData
+	return
 }
 
 func (sh *SectionHeader) String() string {

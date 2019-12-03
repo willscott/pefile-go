@@ -7,6 +7,7 @@ import (
 	"crypto/md5"
 	"crypto/sha1"
 	"crypto/sha256"
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"log"
@@ -15,10 +16,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/awsaba/pefile-go/ordlookup"
-	"github.com/edsrzf/mmap-go"
+	mmap "github.com/edsrzf/mmap-go"
 	"github.com/glaslos/ssdeep"
 	"github.com/pkg/errors"
+	"github.com/willscott/pefile-go/ordlookup"
 )
 
 // PEFile is a representation of the PE/COFF file with some helpful abstractions
@@ -201,6 +202,11 @@ func NewPEFile(filename string) (pe *PEFile, err error) {
 	return pe, nil
 }
 
+// Raw exposes the raw data of the PEFile
+func (pe *PEFile) Raw() []byte {
+	return pe.data
+}
+
 // ByVAddr is a helper for sorting sections by VirtualAddress
 type byVAddr []SectionHeader
 
@@ -226,6 +232,7 @@ func (pe *PEFile) parseSections(offset uint32) (newOffset uint32, err error) {
 		// L2325-2376
 
 		SetFlags(section.Flags, SectionCharacteristics, uint32(section.Data.Characteristics))
+		section.DataBytes = pe.data[section.Data.PointerToRawData : section.Data.PointerToRawData+section.Data.SizeOfRawData]
 
 		// Suspecious check L2383 - L2395
 		pe.Sections = append(pe.Sections, section)
@@ -567,4 +574,91 @@ func (pe *PEFile) GetSHA1Hash() string {
 // GetSHA256Hash calcurates sha256 hash of data
 func (pe *PEFile) GetSHA256Hash() string {
 	return calcHash(sha256.New(), pe.data)
+}
+
+// Save a PEFile
+func (pe *PEFile) Write(destinationFileName string) error {
+	destinationFile, err := os.Create(destinationFileName)
+	if err != nil {
+		return err
+	}
+	var offset = uint32(0)
+	offset, err = pe.DosHeader.Write(destinationFile)
+	if err != nil {
+		return err
+	}
+
+	offset, err = pe.NTHeader.Write(offset, destinationFile)
+	if err != nil {
+		return err
+	}
+
+	offset, err = pe.COFFFileHeader.Write(offset, destinationFile)
+	if err != nil {
+		return err
+	}
+
+	offset, err = pe.OptionalHeader.Write(offset, destinationFile)
+	if err != nil {
+		return err
+	}
+	dataDirs := pe.OptionalHeader.DataDirs
+
+	if pe.OptionalHeader64 != nil {
+		offset, err = pe.OptionalHeader64.Write(offset, destinationFile)
+		if err != nil {
+			return err
+		}
+		dataDirs = pe.OptionalHeader64.DataDirs
+	}
+
+	// data directory headers
+	// the data pointed to is in the virtual address space,
+	// so will get written as part of the section work.
+	for _, dataDir := range dataDirs {
+		offset, err = dataDir.Write(offset, destinationFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	// section headers
+	if uint16(len(pe.Sections)) != pe.COFFFileHeader.Data.NumberOfSections {
+		return errors.New("mismatch between coff reported and actual section count")
+	}
+
+	nextSectionDataPoint := offset + uint32(len(pe.Sections))*uint32(binary.Size(SectionHeaderD{}))
+	// compensate for alignment.
+	if pe.OptionalHeader.Data.FileAlignment != 0x200 {
+		return errors.New("now able to deal w/ weird file alignment settings yet")
+	}
+	if nextSectionDataPoint%0x200 != 0 {
+		nextSectionDataPoint = ((nextSectionDataPoint + 0x200) / 0x200) * 0x200
+	}
+	firstSectionDataPoint := nextSectionDataPoint
+
+	for _, section := range pe.Sections {
+		section.Data.PointerToRawData = nextSectionDataPoint
+
+		offset, err = section.Write(offset, destinationFile)
+		if err != nil {
+			return err
+		}
+		nextSectionDataPoint += section.Data.SizeOfRawData
+	}
+
+	for offset < firstSectionDataPoint {
+		binary.Write(destinationFile, binary.LittleEndian, byte(0))
+		offset++
+	}
+
+	// section data
+	for _, section := range pe.Sections {
+		offset, err = section.WriteData(offset, destinationFile)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

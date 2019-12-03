@@ -3,8 +3,6 @@ package main
 import (
 	"fmt"
 	"os"
-
-	"github.com/awsaba/pefile-go"
 )
 
 func main() {

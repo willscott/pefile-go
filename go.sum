@@ -1,0 +1,12 @@
+github.com/LordNoteworthy/ssdeep v1.0.0 h1:HXsjZalSjg/GjAArY6TQDog6QCQq1oMM2jp34LHmDFg=
+github.com/LordNoteworthy/ssdeep v1.0.0/go.mod h1:fZvjizbCIwiX/MaJsKUl6FXLcN0nIIDWvZdvcsVUpds=
+github.com/awsaba/pefile-go v0.0.0-20170628233837-60c1f2641f3f h1:9PQMlvNZ7xS2k5av5ozI4dBK96qHl0BstgCJ31UDALM=
+github.com/awsaba/pefile-go v0.0.0-20170628233837-60c1f2641f3f/go.mod h1:yIDapJIUkcthvP/bKgSKkcAeu37wfTNV0SS2xPaw7Do=
+github.com/edsrzf/mmap-go v1.0.0 h1:CEBF7HpRnUCSJgGUb5h1Gm7e3VkmVDrR8lvWVLtrOFw=
+github.com/edsrzf/mmap-go v1.0.0/go.mod h1:YO35OhQPt3KJa3ryjFM5Bs14WD66h8eGKpfaBNrHW5M=
+github.com/glaslos/ssdeep v0.1.0 h1:TptgRXvRz1jMQ39pTbE0Le5hToIwSpTB/WN86biy2DY=
+github.com/glaslos/ssdeep v0.1.0/go.mod h1:1sRvX09u8TSLZ0teoG1gZh7qADBv4ZzLAkvGcmYb9uw=
+github.com/pkg/errors v0.8.1 h1:iURUrRGxPUNPdy5/HRSm+Yj6okJ6UtLINN0Q9M4+h3I=
+github.com/pkg/errors v0.8.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
+golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9 h1:ZBzSG/7F4eNKz2L3GE9o300RX0Az1Bw5HF7PDraD+qU=
+golang.org/x/sys v0.0.0-20191128015809-6d18c012aee9/go.mod h1:h1NjWce9XRLGQEsW7wpKNCjG9DtNlClVuFLEZdDNbEs=
